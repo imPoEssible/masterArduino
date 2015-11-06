@@ -51,6 +51,7 @@ void loop() {
   }
   switch(mode){
     case 1:
+      serialFlush();
       resetMotorLED();
       wave();
       resetMotorLED();
@@ -65,6 +66,12 @@ void loop() {
 //      analogWrite(blue_pin, brightness);
 //      analogWrite(green_pin, brightness);
       break;
+  }
+}
+
+void serialFlush(){
+  while (Serial.available() > 0) {
+    Serial.read();
   }
 }
 
