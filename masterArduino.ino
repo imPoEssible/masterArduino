@@ -47,13 +47,14 @@ void setup() {
 
 void loop() {
   if (Serial.available() > 0){
-    mode = Serial.parseInt();
+    mode = Serial.read() - 48;
   }
   switch(mode){
     case 1:
       serialFlush();
       resetMotorLED();
       wave();
+      serialFlush();
       resetMotorLED();
       mode = 0;
       break;
