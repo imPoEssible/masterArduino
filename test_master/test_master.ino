@@ -1,12 +1,26 @@
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
 //MOTOR SETUP:
-Adafruit_MotorShield AFMS = Adafruit_MotorShield();
-Adafruit_DCMotor *M1 = AFMS.getMotor(1);
-Adafruit_DCMotor *M2 = AFMS.getMotor(2);
+Adafruit_MotorShield AFMS_bot = Adafruit_MotorShield(0x60); // Default address, no jumpers
+Adafruit_MotorShield AFMS_top = Adafruit_MotorShield(0x61); // Rightmost jumper closed
 
-int M1speed = 40; //set motor speeds
-int M2speed = 40;
+Adafruit_DCMotor *M1 = AFMS_bot.getMotor(1);
+Adafruit_DCMotor *M2 = AFMS_bot.getMotor(2);
+Adafruit_DCMotor *M3 = AFMS_bot.getMotor(3);
+Adafruit_DCMotor *M4 = AFMS_bot.getMotor(4);
+Adafruit_DCMotor *M5 = AFMS_top.getMotor(5);
+Adafruit_DCMotor *M6 = AFMS_top.getMotor(6);
+Adafruit_DCMotor *M7 = AFMS_top.getMotor(7);
+Adafruit_DCMotor *M8 = AFMS_top.getMotor(8);
+
+int M1_s = 40; //set motor speeds
+int M2_s = 40;
+int M3_s = 40;
+int M4_s = 40;
+int M5_s = 40;
+int M6_s = 40;
+int M7_s = 40;
+int M8_s = 40;
 
 //LED SETUP
 // You can choose the latch pin yourself.
@@ -55,9 +69,16 @@ int impactval;
 long prevTime = 0;
 
 void setup() {
-  AFMS.begin();
-  M1->setSpeed(M1speed);
-  M2->setSpeed(M2speed);
+  AFMS_top.begin();
+  AFMS_bot.begin();
+  M1->setSpeed(M1_s);
+  M2->setSpeed(M2_s);
+  M3->setSpeed(M3_s);
+  M4->setSpeed(M4_s);
+  M5->setSpeed(M5_s);
+  M6->setSpeed(M6_s);
+  M7->setSpeed(M7_s);
+  M8->setSpeed(M8_s);
 
   // Sets the number of 8-bit registers that are used.
   ShiftPWM.SetAmountOfRegisters(numRegisters);
@@ -79,6 +100,7 @@ void loop() {
   
   if (Serial.available() > 0){
     mode = Serial.read() - 48;
+    startTime = millis();
   }
 //  if (mode == prev_mode){
 //    continue;
@@ -94,15 +116,8 @@ void loop() {
   switch(mode){
     case 1:
       serialFlush();
-      offsetTime = millis();
-      while (millis() - offsetTime<10){
-        M1->run(BACKWARD);
-        offsetTime=0; //Reseting it
-      }
-      M1->run(BACKWARD);
-      M2->run(BACKWARD);
+      wave1();
       inOutAll();
-      //rgbLedRainbow(3000,numRGBLeds);
       break;
     case 2:
       serialFlush();
@@ -130,12 +145,61 @@ void serialFlush(){
   }
 }
 
+/*MOTOR FUNCTIONS*/
 void resetMotor(){
   //reset motors
   M1->run(RELEASE);
   M2->run(RELEASE);
+  M3->run(RELEASE);
+  M4->run(RELEASE);
+  M5->run(RELEASE);
+  M6->run(RELEASE);
+  M7->run(RELEASE);
+  M8->run(RELEASE);
+
+  M1_s = 40; //set motor speeds
+  M2_s = 40;
+  M3_s = 40;
+  M4_s = 40;
+  M5_s = 40;
+  M6_s = 40;
+  M7_s = 40;
+  M8_s = 40;
+  
+  M1->setSpeed(M1_s);
+  M2->setSpeed(M2_s);
+  M3->setSpeed(M3_s);
+  M4->setSpeed(M4_s);
+  M5->setSpeed(M5_s);
+  M6->setSpeed(M6_s);
+  M7->setSpeed(M7_s);
+  M8->setSpeed(M8_s);
 }
 
+void wave1(){
+  unsigned long cycleTime = 5000;
+  unsigned long time = millis()-startTime;
+  
+  M3_s = 1000;
+  M4_s = 1000;
+  
+  M3->setSpeed(M3_s);
+  M4->setSpeed(M4_s);
+  
+  if (time < cycleTime){
+    M3->run(FORWARD);
+    M4->run(FORWARD);
+  }
+  else{
+    mode = 2;
+  }
+
+}
+
+void alternate(){
+}
+
+/*ACCELEROMETER FUNCTIONS*/
 void detectKnock(){
   impactval = analogRead(knock_pin);
   if (impactval > 500){   
