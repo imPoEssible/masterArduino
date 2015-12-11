@@ -52,7 +52,7 @@ void printInstructions(void);
 // Choose them wisely and use the PrintInterruptLoad() function to verify your load.
 unsigned char maxBrightness = 255;
 unsigned char pwmFrequency = 75;
-unsigned int numRegisters = 3;
+unsigned int numRegisters = 6;
 unsigned int numOutputs = numRegisters*8;
 unsigned int numRGBLeds = numRegisters*8/3;
 unsigned int fadingMode = 0; //start with all LED's off.
@@ -70,7 +70,7 @@ void setup(){
 
   // SetPinGrouping allows flexibility in LED setup. 
   // If your LED's are connected like this: RRRRGGGGBBBBRRRRGGGGBBBB, use SetPinGrouping(4).
-  ShiftPWM.SetPinGrouping(8); //This is the default, but I added here to demonstrate how to use the funtion
+  ShiftPWM.SetPinGrouping(1); //This is the default, but I added here to demonstrate how to use the funtion
   
   ShiftPWM.Start(pwmFrequency,maxBrightness);
   printInstructions();
