@@ -9,6 +9,10 @@ Adafruit_DCMotor *M2 = AFMS.getMotor(2);
 int M1speed = 40; //set motor speeds
 int M2speed = 40;
 
+int state = 0; // Active = 1, Passive = 0
+int counter = 0; // counts knocks up to 3
+int impactval;
+long prevTimexl = 0; //For the knock knock
 
 // set up LEDs
 int light_mode = 0;
@@ -38,34 +42,49 @@ void setup() {
 }
 
 void loop() {
-  if (Serial.available() > 0){
-    mode = Serial.read() - 48;
+  if ((millis()-prevTimexl)> 5000){
+    counter = 0;
   }
-  switch(mode){
-    case 1:
-      serialFlush();
-      resetMotorLED();
-      offsetTime = millis();
-      while (millis() - offsetTime<10){
+  if (impactval > 500){   
+    if ((millis() - prevTimexl) > 300){
+      prevTimexl = millis();
+      counter = counter + 1;
+    }
+    if (counter == 3){
+      if (state == 0){
+      counter = 0;
+      state = 1;
+      }
+      else if (state == 1){
+      counter = 0;
+      state = 0;
+      }
+      }
+    }
+  if (state == 1){
+    if (Serial.available() > 0){
+      mode = Serial.read() - 48;
+    }
+    switch(mode){
+      case 1:
+        serialFlush();
+        resetMotorLED();
+        offsetTime = millis();
+        while (millis() - offsetTime<10){
+          M1->run(BACKWARD);
+          offsetTime=0; //Reseting it
+        }
         M1->run(BACKWARD);
-        offsetTime=0; //Reseting it
-      }
-      M1->run(BACKWARD);
-      M2->run(BACKWARD);
-      break;
-    case 2:
-      serialFlush();
-      
-    default:
-      if ((millis() - prevTime) > 1000){
-        brightness = map(analogRead(photoDiode_pin), 500, 900, 0, 255);
-        prevTime = millis();
-      }
-      Serial.println("default");
-      analogWrite(red_pin, brightness);
-//      analogWrite(blue_pin, brightness);
-//      analogWrite(green_pin, brightness);
-      break;
+        M2->run(BACKWARD);
+        break;
+      case 2:
+        serialFlush();
+        resetMotor();
+        
+      default:
+        serialFlush();
+        resetMotor();
+    }
   }
 }
 
@@ -87,3 +106,13 @@ void resetMotor(){
   M1->run(RELEASE);
   M2->run(RELEASE);
 }
+
+if ((millis() - prevTime) > 1000){
+          brightness = map(analogRead(photoDiode_pin), 500, 900, 0, 255);
+          prevTime = millis();
+        }
+        Serial.println("default");
+        analogWrite(red_pin, brightness);
+        //analogWrite(blue_pin, brightness);
+        //analogWrite(green_pin, brightness);
+        break;
