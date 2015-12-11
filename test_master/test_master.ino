@@ -112,6 +112,9 @@ void loop() {
   if (counter == 1){
     mode = 3;
   }
+  else if (counter == 2){
+    Serial.println("KNOCKKNOCK");
+  }
 
   switch(mode){
     case 1:
@@ -177,11 +180,11 @@ void resetMotor(){
 }
 
 void wave1(){
-  unsigned long cycleTime = 5000;
+  unsigned long cycleTime = 2000;
   unsigned long time = millis()-startTime;
   
-  M3_s = 1000;
-  M4_s = 1000;
+  M3_s = 500;
+  M4_s = 500;
   
   M3->setSpeed(M3_s);
   M4->setSpeed(M4_s);
