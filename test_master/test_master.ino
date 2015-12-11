@@ -55,13 +55,13 @@ void loop() {
       break;
     case 2:
       serialFlush();
+      resetMotor();      
       
     default:
       if ((millis() - prevTime) > 1000){
         brightness = map(analogRead(photoDiode_pin), 500, 900, 0, 255);
         prevTime = millis();
       }
-      Serial.println("default");
       analogWrite(red_pin, brightness);
 //      analogWrite(blue_pin, brightness);
 //      analogWrite(green_pin, brightness);
