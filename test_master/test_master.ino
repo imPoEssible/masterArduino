@@ -1,4 +1,3 @@
-
 #include <Wire.h>
 #include <Adafruit_MotorShield.h>
 //MOTOR SETUP:
@@ -18,15 +17,14 @@ const bool ShiftPWM_balanceLoad = false;
 #include <ShiftPWM.h>   // include ShiftPWM.h after setting the pins!
 
 // Function prototypes (telling the compiler these functions exist).
+void breatheSleep(void);
 void oneByOne(void);
 void inOutTwoLeds(void);
 void inOutAll(void);
 void alternatingColors(void);
 void hueShiftAll(void);
 void randomColors(void);
-void fakeVuMeter(void);
 void rgbLedRainbow(unsigned long cycleTime, int rainbowWidth);
-void printInstructions(void);
 
 // Here you set the number of brightness levels, the update frequency and the number of shift registers.
 // These values affect the load of ShiftPWM.
@@ -41,14 +39,20 @@ unsigned int fadingMode = 0; //start with all LED's off.
 unsigned long startTime = 0; // start time for the chosen fading mode
 
 //Photodiode
-byte photoDiode_pin = A5;
-int brightness;
-long prevTime = 0;
+byte photoDiode_pin = A0;
+long pd_bright;
 long offsetTime = 0; //Used to create offset
 
 // set up mode variable
 byte mode = 0;
 byte prev_mode = 0;
+
+//KNOCK VARIABLES
+byte knock_pin = A1;
+int state = 0; // Active = 1, Passive = 0
+int counter = 0; // counts knocks up to 3
+int impactval;
+long prevTime = 0;
 
 void setup() {
   AFMS.begin();
@@ -68,12 +72,25 @@ void setup() {
 }
 
 void loop() {
+  //CHANGE NUMBER AS NECESSARY
+  if ((millis()-prevTime)> 1000){
+    counter = 0;
+  }
+  
   if (Serial.available() > 0){
     mode = Serial.read() - 48;
   }
 //  if (mode == prev_mode){
 //    continue;
 //  }
+//  pd_bright = map(analogRead(photoDiode_pin), 690, 1000, 0, 1);
+  pd_bright = map(analogRead(photoDiode_pin), 500, 900, 0, 1);
+
+  detectKnock();
+  if (counter == 1){
+    mode = 3;
+  }
+
   switch(mode){
     case 1:
       serialFlush();
@@ -84,20 +101,25 @@ void loop() {
       }
       M1->run(BACKWARD);
       M2->run(BACKWARD);
-      rgbLedRainbow(3000,numRGBLeds);
+      inOutAll();
+      //rgbLedRainbow(3000,numRGBLeds);
       break;
     case 2:
       serialFlush();
-      alternatingColors();
+      oneByOne();
       resetMotor();      
-      
+      break;
+    case 3:
+      resetMotor();
+      M1->run(FORWARD);
+      randomColors();
+      break;
+    case 4:
+      resetMotor();
+      M2->run(FORWARD);
+      rgbLedRainbow(3000,numRGBLeds);
     default:
-      if ((millis() - prevTime) > 1000){
-        brightness = map(analogRead(photoDiode_pin), 500, 900, 0, 255);
-        prevTime = millis();
-      }
-//      analogWrite(blue_pin, brightness);
-//      analogWrite(green_pin, brightness);
+      breatheSleep();
       break;
   }
 }
@@ -114,7 +136,44 @@ void resetMotor(){
   M2->run(RELEASE);
 }
 
+void detectKnock(){
+  impactval = analogRead(knock_pin);
+  if (impactval > 500){   
+    if ((millis() - prevTime) > 400){
+      prevTime = millis();
+      counter = counter + 1;
+    }
+    if (counter == 3){
+      if (state == 0){
+        counter = 0;
+        state = 1;
+      }
+      else if (state == 1){
+        counter = 0;
+        state = 0;
+      }
+      }
+    Serial.println(counter);
+}
+}
+
 /*LED PWM FUNCTIONS BELOW*/
+void breatheSleep(void){
+  unsigned long cycleTime = 2000;
+  unsigned char brightness;
+  unsigned long time = millis()-startTime;
+  unsigned long currentStep = time%(cycleTime*2);  
+  unsigned long hue = (360*time/20000)%360;
+
+  if(currentStep <= cycleTime ){
+    brightness = currentStep*255/cycleTime; ///fading in
+  }
+  else{
+    brightness = 255-(currentStep-cycleTime)*255/cycleTime; ///fading out;
+  }
+  
+  ShiftPWM.SetAllHSV(hue, brightness, brightness); 
+}
 
 void oneByOne(void){ // Fade in and fade out all outputs one at a time
   unsigned char brightness;
@@ -207,57 +266,6 @@ void randomColors(void){  // Update random LED to random color. Funky!
   if(millis()-previousUpdateTime > updateDelay){
     previousUpdateTime = millis();
     ShiftPWM.SetHSV(random(numRGBLeds),random(360),255,255);
-  }
-}
-
-void fakeVuMeter(void){ // imitate a VU meter
-  static unsigned int peak = 0;
-  static unsigned int prevPeak = 0;
-  static unsigned long currentLevel = 0;
-  static unsigned long fadeStartTime = startTime;
-  
-  unsigned long fadeTime = (currentLevel*2);// go slower near the top
-
-  unsigned long time = millis()-fadeStartTime;
-  currentLevel = time%(fadeTime);
-
-  if(currentLevel==peak){
-    // get a new peak value
-    prevPeak = peak;
-    while(abs(peak-prevPeak)<5){
-      peak =  random(numRGBLeds); // pick a new peak value that differs at least 5 from previous peak
-    }
-  }
-
-  if(millis() - fadeStartTime > fadeTime){
-    fadeStartTime = millis();
-    if(currentLevel<peak){ //fading in
-      currentLevel++;
-    }
-    else{ //fading out
-      currentLevel--;
-    }
-  }
-  // animate to new top
-  for(unsigned int led=0;led<numRGBLeds;led++){
-    if(led<currentLevel){
-      int hue = (numRGBLeds-1-led)*120/numRGBLeds; // From green to red
-      ShiftPWM.SetHSV(led,hue,255,255); 
-    }
-    else if(led==currentLevel){
-      int hue = (numRGBLeds-1-led)*120/numRGBLeds; // From green to red
-      int value;
-      if(currentLevel<peak){ //fading in        
-        value = time*255/fadeTime;
-      }
-      else{ //fading out
-        value = 255-time*255/fadeTime;
-      }
-      ShiftPWM.SetHSV(led,hue,255,value);       
-    }
-    else{
-      ShiftPWM.SetRGB(led,0,0,0);
-    }
   }
 }
 

@@ -222,6 +222,8 @@ void inOutAll(void){  // Fade in all outputs
   ShiftPWM.SetAll(brightness);
 }
 
+
+
 void alternatingColors(void){ // Alternate LED's in 6 different colors
   unsigned long holdTime = 2000;
   unsigned long time = millis()-startTime;
