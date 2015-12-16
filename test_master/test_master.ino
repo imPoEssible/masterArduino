@@ -53,7 +53,7 @@ unsigned int fadingMode = 0; //start with all LED's off.
 unsigned long startTime = 0; // start time for the chosen fading mode
 
 //Photodiode
-byte photoDiode_pin = A0;
+byte photoDiode_pin = A1;
 long pd_bright;
 long offsetTime = 0; //Used to create offset
 
@@ -62,7 +62,7 @@ byte mode = 0;
 byte prev_mode = 0;
 
 //KNOCK VARIABLES
-byte knock_pin = A1;
+byte knock_pin = A3;
 int state = 0; // Active = 1, Passive = 0
 int counter = 0; // counts knocks up to 3
 int impactval;
@@ -105,12 +105,16 @@ void loop() {
 //  if (mode == prev_mode){
 //    continue;
 //  }
-//  pd_bright = map(analogRead(photoDiode_pin), 690, 1000, 0, 1);
-  pd_bright = map(analogRead(photoDiode_pin), 500, 900, 0, 1);
-
+  pd_bright = map(analogRead(photoDiode_pin), 800, 1000, 0, 200);
+//  pd_bright = map(analogRead(photoDiode_pin), 500, 900, 0, 255);
+//  Serial.println(analogRead(photoDiode_pin));
+  if (pd_bright < abs(100)){
+    Serial.println("SLEEP");
+  }
   detectKnock();
   if (counter == 1){
     mode = 3;
+    startTime = millis();
   }
   else if (counter == 2){
     Serial.println("KNOCKKNOCK");
@@ -328,12 +332,21 @@ void hueShiftAll(void){  // Hue shift all LED's
 }
 
 void randomColors(void){  // Update random LED to random color. Funky!
-  unsigned long updateDelay = 100;
-  static unsigned long previousUpdateTime;
-  if(millis()-previousUpdateTime > updateDelay){
-    previousUpdateTime = millis();
-    ShiftPWM.SetHSV(random(numRGBLeds),random(360),255,255);
+  unsigned long cycleTime = 2000;
+  unsigned long time = millis()-startTime;
+  
+  if (time < cycleTime){
+    unsigned long updateDelay = 50;
+    static unsigned long previousUpdateTime;
+    if(millis()-previousUpdateTime > updateDelay){
+      previousUpdateTime = millis();
+      ShiftPWM.SetHSV(random(numRGBLeds),random(360),255,255);
+    }
   }
+  else{
+    mode = 9;
+  }
+
 }
 
 void rgbLedRainbow(unsigned long cycleTime, int rainbowWidth){
@@ -346,4 +359,4 @@ void rgbLedRainbow(unsigned long cycleTime, int rainbowWidth){
     int hue = ((led)*360/(rainbowWidth-1)+colorShift)%360; // Set hue from 0 to 360 from first to last led and shift the hue
     ShiftPWM.SetHSV(led, hue, 255, 255); // write the HSV values, with saturation and value at maximum
   }
-}
+f}
