@@ -8,19 +8,19 @@ Adafruit_DCMotor *M1 = AFMS_bot.getMotor(1);
 Adafruit_DCMotor *M2 = AFMS_bot.getMotor(2);
 Adafruit_DCMotor *M3 = AFMS_bot.getMotor(3);
 Adafruit_DCMotor *M4 = AFMS_bot.getMotor(4);
-Adafruit_DCMotor *M5 = AFMS_top.getMotor(5);
-Adafruit_DCMotor *M6 = AFMS_top.getMotor(6);
-Adafruit_DCMotor *M7 = AFMS_top.getMotor(7);
-Adafruit_DCMotor *M8 = AFMS_top.getMotor(8);
+Adafruit_DCMotor *M5 = AFMS_top.getMotor(1);
+Adafruit_DCMotor *M6 = AFMS_top.getMotor(2);
+Adafruit_DCMotor *M7 = AFMS_top.getMotor(3);
+Adafruit_DCMotor *M8 = AFMS_top.getMotor(4);
 
-int M1_s = 40; //set motor speeds
-int M2_s = 40;
-int M3_s = 40;
-int M4_s = 40;
-int M5_s = 40;
-int M6_s = 40;
-int M7_s = 40;
-int M8_s = 40;
+int M1_s = 30; //set motor speeds
+int M2_s = 30;
+int M3_s = 30;
+int M4_s = 30;
+int M5_s = 30;
+int M6_s = 30;
+int M7_s = 30;
+int M8_s = 30;
 
 //LED SETUP
 // You can choose the latch pin yourself.
@@ -67,6 +67,7 @@ int state = 0; // Active = 1, Passive = 0
 int counter = 0; // counts knocks up to 3
 int impactval;
 long prevTime = 0;
+long knockstartTime = 0;
 
 void setup() {
   AFMS_top.begin();
@@ -94,31 +95,41 @@ void setup() {
 
 void loop() {
   //CHANGE NUMBER AS NECESSARY
-  if ((millis()-prevTime)> 1000){
+  //Resets knock counter to 0 if >1 second has passed without accelerometer movement
+  if ((millis()-prevTime)> 2000){
     counter = 0;
+    resetMotor();
+    mode = 9;
+    knockstartTime = millis();
   }
   
   if (Serial.available() > 0){
     mode = Serial.read() - 48;
     startTime = millis();
+    resetMotor();
   }
 //  if (mode == prev_mode){
 //    continue;
 //  }
-  pd_bright = map(analogRead(photoDiode_pin), 800, 1000, 0, 200);
-//  pd_bright = map(analogRead(photoDiode_pin), 500, 900, 0, 255);
-//  Serial.println(analogRead(photoDiode_pin));
+//  pd_bright = map(analogRead(photoDiode_pin), 800, 1000, 0, 200);
+  pd_bright = map(analogRead(photoDiode_pin), 700, 900, 0, 200);
+  //Serial.println(analogRead(photoDiode_pin));
   if (pd_bright < abs(100)){
     Serial.println("SLEEP");
+    mode = 4;
   }
+  
   detectKnock();
+  
+  if (millis() - startTime > 5000){
+    mode = 9;
+  }  
   if (counter == 1){
     mode = 3;
-    startTime = millis();
-  }
-  else if (counter == 2){
+    knockstartTime = millis();
     Serial.println("KNOCKKNOCK");
   }
+
 
   switch(mode){
     case 1:
@@ -129,19 +140,17 @@ void loop() {
     case 2:
       serialFlush();
       oneByOne();
-      resetMotor();      
+      oboWave();
       break;
     case 3:
-      resetMotor();
-      M1->run(FORWARD);
+      halfWave();
       randomColors();
       break;
     case 4:
-      resetMotor();
-      M2->run(FORWARD);
       rgbLedRainbow(3000,numRGBLeds);
     default:
       breatheSleep();
+      sleepWave();
       break;
   }
 }
@@ -183,27 +192,139 @@ void resetMotor(){
   M8->setSpeed(M8_s);
 }
 
+void halfWave(){
+  unsigned long cycleTime = 2000;
+  unsigned long time = millis()-knockstartTime;
+
+  int s = 100;
+  
+  M1->setSpeed(s);
+  M2->setSpeed(s);
+  M3->setSpeed(s);
+  M4->setSpeed(s);
+  M5->setSpeed(s);
+  M6->setSpeed(s);
+  M7->setSpeed(s);
+  M8->setSpeed(s);
+
+  
+  if (time <= 5000){
+    Serial.println("one");
+    M1->run(FORWARD);
+    M2->run(FORWARD);
+    M3->run(FORWARD);
+    M4->run(FORWARD);
+    M5->run(RELEASE);
+    M6->run(RELEASE);
+    M7->run(RELEASE);
+    M8->run(RELEASE);
+  }
+  else if (time >= 5000 && time <= 10000){
+    Serial.println("two");
+    M1->run(RELEASE);
+    M2->run(RELEASE);
+    M3->run(RELEASE);
+    M4->run(RELEASE);
+    M5->run(BACKWARD);
+    M6->run(BACKWARD);
+    M7->run(BACKWARD);
+    M8->run(BACKWARD);
+  }
+  else{
+    mode = 9;
+  }
+  
+}
+
+void oboWave(){
+  unsigned long time = millis()-startTime;
+  if (time <= 2000){
+    M1->run(FORWARD);
+                                                                                                                                                                                                                                                                                                                        }
+  else if (time > 2000 && time <= 3000) {
+    M1->run(RELEASE);
+    M2->run(FORWARD);
+  }
+  else if (time > 3000 && time <= 4000) {
+    M2->run(RELEASE);
+    M3->run(FORWARD);
+  }
+  else if (time > 4000 && time <= 5000) {
+    M3->run(RELEASE);
+    M4->run(FORWARD);
+  }
+  else if (time > 5000 && time <= 6000) {
+    M4->run(RELEASE);
+    M5->run(FORWARD);  
+  }
+  else if (time > 6000 && time <= 7000) {
+    M5->run(RELEASE);
+    M6->run(FORWARD);
+  }
+  else if (time > 7000 && time <= 8000) {
+    M6->run(RELEASE);
+    M7->run(FORWARD);
+  }
+  else if (time > 8000 && time <= 9000){
+    M7->run(RELEASE);
+    M8->run(FORWARD);
+  }
+  else{
+    startTime = millis();
+  }
+  
+}
+
+void sleepWave(){
+
+  M1->run(FORWARD);
+  M2->run(BACKWARD);
+  M3->run(FORWARD);
+  M4->run(BACKWARD);
+  M5->run(FORWARD);
+  M6->run(BACKWARD);
+  M7->run(FORWARD);
+  M8->run(BACKWARD);
+
+}
+
 void wave1(){
   unsigned long cycleTime = 2000;
   unsigned long time = millis()-startTime;
+ 
+  int s = 100;
   
-  M3_s = 500;
-  M4_s = 500;
+  M1->setSpeed(s);
+  M2->setSpeed(s);
+  M3->setSpeed(s);
+  M4->setSpeed(s);
+  M5->setSpeed(s);
+  M6->setSpeed(s);
+  M7->setSpeed(s);
+  M8->setSpeed(s);
   
-  M3->setSpeed(M3_s);
-  M4->setSpeed(M4_s);
-  
-  if (time < cycleTime){
+    M1->run(FORWARD);
+    M2->run(FORWARD);
     M3->run(FORWARD);
     M4->run(FORWARD);
-  }
-  else{
-    mode = 2;
-  }
+    M5->run(FORWARD);
+    M6->run(FORWARD);
+    M7->run(FORWARD);
+    M8->run(FORWARD);
 
 }
 
 void alternate(){
+  M1->run(FORWARD);
+  M2->run(FORWARD);
+  M3->run(FORWARD);
+  M4->run(FORWARD);
+  
+  
+  M5->run(BACKWARD);
+  M6->run(BACKWARD);
+  M7->run(BACKWARD);
+  M8->run(BACKWARD);
 }
 
 /*ACCELEROMETER FUNCTIONS*/
@@ -335,17 +456,13 @@ void randomColors(void){  // Update random LED to random color. Funky!
   unsigned long cycleTime = 2000;
   unsigned long time = millis()-startTime;
   
-  if (time < cycleTime){
-    unsigned long updateDelay = 50;
-    static unsigned long previousUpdateTime;
-    if(millis()-previousUpdateTime > updateDelay){
-      previousUpdateTime = millis();
-      ShiftPWM.SetHSV(random(numRGBLeds),random(360),255,255);
-    }
+  unsigned long updateDelay = 50;
+  static unsigned long previousUpdateTime;
+  if(millis()-previousUpdateTime > updateDelay){
+    previousUpdateTime = millis();
+    ShiftPWM.SetHSV(random(numRGBLeds),random(360),255,255);
   }
-  else{
-    mode = 9;
-  }
+
 
 }
 
@@ -359,4 +476,4 @@ void rgbLedRainbow(unsigned long cycleTime, int rainbowWidth){
     int hue = ((led)*360/(rainbowWidth-1)+colorShift)%360; // Set hue from 0 to 360 from first to last led and shift the hue
     ShiftPWM.SetHSV(led, hue, 255, 255); // write the HSV values, with saturation and value at maximum
   }
-f}
+}
